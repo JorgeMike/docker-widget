@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents3
-import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.kirigami as Kirigami
 
@@ -27,7 +26,7 @@ PlasmoidItem {
         const items = containers.filter(c =>
             (!onlyRunning || c.state === "running") &&
             (filterText === "" ||
-             (c.name + " " + c.image + " " + c.project).toLowerCase().includes(filterText)))
+             (c.name + " " + c.image + " " + c.project + " " + c.hostPorts).toLowerCase().includes(filterText)))
         let same = items.length === viewModel.count
         for (let i = 0; same && i < items.length; i++)
             same = viewModel.get(i).id === items[i].id
@@ -52,17 +51,20 @@ PlasmoidItem {
     Plasmoid.icon: "docker-desktop"
 
     // En el escritorio siempre se ve la lista; en el panel, el ícono con contador.
-    preferredRepresentation: Plasmoid.formFactor === PlasmaCore.Types.Planar
-        ? fullRepresentation : compactRepresentation
-    Plasmoid.backgroundHints: PlasmaCore.Types.DefaultBackground | PlasmaCore.Types.ConfigurableBackground
+    preferredRepresentation: inPanel ? compactRepresentation : fullRepresentation
+    Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
+
+    readonly property bool inPanel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+                                 || Plasmoid.formFactor === PlasmaCore.Types.Vertical
+    readonly property color dockerBlue: "#2496ED"
 
     function stateColor(state) {
         switch (state) {
-        case "running":    return Kirigami.Theme.positiveTextColor
-        case "paused":     return Kirigami.Theme.neutralTextColor
-        case "restarting": return Kirigami.Theme.neutralTextColor
-        case "dead":       return Kirigami.Theme.negativeTextColor
-        default:           return Kirigami.Theme.disabledTextColor
+        case "running":    return "#34d399"
+        case "paused":     return "#fbbf24"
+        case "restarting": return "#fbbf24"
+        case "dead":       return "#f87171"
+        default:           return "#6b7280"
         }
     }
 
@@ -77,6 +79,20 @@ PlasmoidItem {
         executable.run("docker " + action + " " + c.id)
     }
 
+    // "0.0.0.0:8080->80/tcp, [::]:8080->80/tcp" -> ["8080"]
+    function hostPorts(ports) {
+        const seen = []
+        const re = /:(\d+)->\d+\/tcp/g
+        let m
+        while ((m = re.exec(ports)) !== null)
+            if (seen.indexOf(m[1]) === -1) seen.push(m[1])
+        return seen
+    }
+
+    readonly property int stoppedCount: containers.length - runningCount
+    property bool manualRefresh: false
+    readonly property string noProject: "Sin proyecto"
+
     function parseList(stdout) {
         const out = []
         for (const line of stdout.split("\n")) {
@@ -84,11 +100,14 @@ PlasmoidItem {
             const p = line.split("|")
             out.push({
                 id: p[0], name: p[1], image: p[2], state: p[3], status: p[4],
-                project: p[5] || "", ports: p.slice(6).join("|")
+                project: p[5] || "", ports: p.slice(6).join("|"),
+                hostPorts: root.hostPorts(p.slice(6).join("|")).join(","),
+                group: p[5] || root.noProject
             })
         }
         // Agrupar por proyecto de compose, luego por nombre
-        out.sort((a, b) => (a.project || "~").localeCompare(b.project || "~")
+        out.sort((a, b) => (a.project === "") - (b.project === "")
+                           || a.project.localeCompare(b.project)
                            || a.name.localeCompare(b.name))
         return out
     }
@@ -108,6 +127,7 @@ PlasmoidItem {
             const code = data["exit code"]
             if (source === root.listCommand) {
                 root.loaded = true
+                root.manualRefresh = false
                 if (code === 0) {
                     root.errorText = ""
                     root.containers = root.parseList(data["stdout"])
@@ -147,189 +167,8 @@ PlasmoidItem {
     onExpandedChanged: if (root.expanded) refresh()
 
     // ---------- Vista compacta (panel) ----------
-    compactRepresentation: MouseArea {
-        hoverEnabled: true
-        onClicked: root.expanded = !root.expanded
-
-        Kirigami.Icon {
-            anchors.fill: parent
-            source: "docker-desktop"
-            fallback: "application-x-executable"
-            active: parent.containsMouse
-        }
-
-        Rectangle {
-            visible: root.loaded && root.errorText === ""
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            width: Math.max(height, badgeLabel.implicitWidth + 6)
-            height: Math.max(12, parent.height * 0.45)
-            radius: height / 2
-            color: root.runningCount > 0 ? Kirigami.Theme.positiveTextColor
-                                         : Kirigami.Theme.disabledTextColor
-            PlasmaComponents3.Label {
-                id: badgeLabel
-                anchors.centerIn: parent
-                text: root.runningCount
-                color: "white"
-                font.bold: true
-                font.pixelSize: parent.height * 0.75
-            }
-        }
-    }
+    compactRepresentation: CompactRepresentation {}
 
     // ---------- Vista completa (popup / escritorio) ----------
-    fullRepresentation: PlasmaExtras.Representation {
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 22
-        Layout.minimumHeight: Kirigami.Units.gridUnit * 18
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 26
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 26
-        collapseMarginsHint: true
-
-        header: PlasmaExtras.PlasmoidHeading {
-            RowLayout {
-                anchors.fill: parent
-                spacing: Kirigami.Units.smallSpacing
-
-                PlasmaExtras.SearchField {
-                    Layout.fillWidth: true
-                    placeholderText: "Filtrar contenedores…"
-                    onTextChanged: root.filterText = text.toLowerCase()
-                }
-                PlasmaComponents3.ToolButton {
-                    icon.name: "view-filter"
-                    checkable: true
-                    checked: root.onlyRunning
-                    onToggled: root.onlyRunning = checked
-                    PlasmaComponents3.ToolTip { text: "Solo los que están corriendo" }
-                }
-                PlasmaComponents3.ToolButton {
-                    icon.name: "view-refresh"
-                    onClicked: root.refresh()
-                    PlasmaComponents3.ToolTip { text: "Actualizar" }
-                }
-            }
-        }
-
-        footer: PlasmaExtras.PlasmoidHeading {
-            position: PlasmaComponents3.ToolBar.Footer
-            visible: root.errorText !== "" && root.containers.length > 0
-            PlasmaComponents3.Label {
-                anchors.fill: parent
-                text: root.errorText
-                color: Kirigami.Theme.negativeTextColor
-                wrapMode: Text.Wrap
-                elide: Text.ElideRight
-                maximumLineCount: 2
-            }
-        }
-
-        PlasmaComponents3.ScrollView {
-            anchors.fill: parent
-
-            ListView {
-                id: list
-                clip: true
-                spacing: Kirigami.Units.smallSpacing
-                topMargin: Kirigami.Units.smallSpacing
-                bottomMargin: Kirigami.Units.smallSpacing
-
-                model: viewModel
-
-                section.property: "project"
-                section.delegate: Kirigami.ListSectionHeader {
-                    required property string section
-                    width: ListView.view.width
-                    text: section !== "" ? section : "Sin proyecto"
-                }
-
-                delegate: PlasmaComponents3.ItemDelegate {
-                    id: row
-                    required property var model
-                    readonly property var c: model
-                    readonly property bool isRunning: c.state === "running"
-                    readonly property string pending: root.busy[c.id] || ""
-
-                    width: ListView.view.width
-                    hoverEnabled: true
-                    down: false
-
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.largeSpacing
-
-                        Rectangle {
-                            Layout.alignment: Qt.AlignVCenter
-                            width: Kirigami.Units.gridUnit * 0.6
-                            height: width
-                            radius: width / 2
-                            color: root.stateColor(row.c.state)
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            PlasmaComponents3.Label {
-                                Layout.fillWidth: true
-                                text: row.c.name
-                                font.bold: true
-                                elide: Text.ElideRight
-                            }
-                            PlasmaComponents3.Label {
-                                Layout.fillWidth: true
-                                text: row.c.image + " · " + row.c.status
-                                font: Kirigami.Theme.smallFont
-                                opacity: 0.75
-                                elide: Text.ElideRight
-                            }
-                            PlasmaComponents3.Label {
-                                Layout.fillWidth: true
-                                visible: row.isRunning && row.c.ports !== ""
-                                text: row.c.ports
-                                font: Kirigami.Theme.smallFont
-                                opacity: 0.6
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        PlasmaComponents3.BusyIndicator {
-                            visible: row.pending !== ""
-                            running: visible
-                            Layout.preferredWidth: Kirigami.Units.iconSizes.medium
-                            Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-                        }
-
-                        PlasmaComponents3.ToolButton {
-                            visible: row.pending === "" && !row.isRunning
-                            icon.name: "media-playback-start"
-                            onClicked: root.act("start", row.c)
-                            PlasmaComponents3.ToolTip { text: "Levantar" }
-                        }
-                        PlasmaComponents3.ToolButton {
-                            visible: row.pending === "" && row.isRunning
-                            icon.name: "view-refresh"
-                            onClicked: root.act("restart", row.c)
-                            PlasmaComponents3.ToolTip { text: "Reiniciar" }
-                        }
-                        PlasmaComponents3.ToolButton {
-                            visible: row.pending === "" && row.isRunning
-                            icon.name: "media-playback-stop"
-                            onClicked: root.act("stop", row.c)
-                            PlasmaComponents3.ToolTip { text: "Detener" }
-                        }
-                    }
-                }
-
-                PlasmaExtras.PlaceholderMessage {
-                    anchors.centerIn: parent
-                    width: parent.width - Kirigami.Units.gridUnit * 4
-                    visible: list.count === 0 && root.loaded
-                    iconName: root.errorText !== "" ? "dialog-error" : "docker-desktop"
-                    text: root.errorText !== "" ? "No se pudo hablar con Docker"
-                          : root.containers.length === 0 ? "No hay contenedores"
-                          : "Ningún contenedor coincide"
-                    explanation: root.errorText
-                }
-            }
-        }
-    }
+    fullRepresentation: FullRepresentation {}
 }

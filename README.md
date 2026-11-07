@@ -2,7 +2,9 @@
 
 Plasmoide para KDE Plasma 6 que muestra tus contenedores de Docker, su estado, y te deja levantarlos, reiniciarlos o detenerlos con un clic.
 
-![Captura del widget](screenshots/widget.png)
+| Estilo moderno | Estilo Plasma |
+|---|---|
+| ![Estilo moderno](screenshots/moderno.png) | ![Estilo Plasma](screenshots/plasma.png) |
 
 ## Qué hace
 

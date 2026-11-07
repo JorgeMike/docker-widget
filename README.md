@@ -15,6 +15,20 @@ Plasmoide para KDE Plasma 6 que muestra tus contenedores de Docker, su estado, y
 - En el panel aparece como ícono con un tooltip que dice cuántos contenedores están corriendo; en el escritorio muestra la lista completa.
 - Se actualiza solo: cada 3 s con el popup abierto, cada 10 s en el escritorio y cada 30 s en el panel cerrado. Si nada cambió, no redibuja la lista.
 
+## Estilos
+
+Clic derecho en el widget → **Configurar** → **Apariencia**:
+
+- **Plasma**: componentes y colores de tu tema (respeta claro/oscuro, el color de acento y el fondo normal de los widgets). Se ve como los widgets que trae KDE.
+- **Moderno** (por defecto): tarjeta oscura con efectos.
+
+Solo se carga el diseño elegido: cada estilo vive en su propio archivo (`FullRepresentationPlasma.qml`, `FullRepresentationModern.qml`, …) y `StyleLoader.qml` abre únicamente el que toca.
+
+### Agregar un estilo nuevo
+
+1. Crea `contents/ui/FullRepresentation<Nombre>.qml` y `contents/ui/CompactRepresentation<Nombre>.qml`. Toman los datos y acciones de `root` (definidos en `main.qml`).
+2. Agrega la opción en `contents/ui/configAppearance.qml` y su nombre en `StyleLoader.qml`.
+
 ## Requisitos
 
 - KDE Plasma 6.0 o superior

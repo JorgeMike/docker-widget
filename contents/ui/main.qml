@@ -52,13 +52,26 @@ PlasmoidItem {
 
     // En el escritorio siempre se ve la lista; en el panel, el ícono con contador.
     preferredRepresentation: inPanel ? compactRepresentation : fullRepresentation
-    Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
+    // Estilo Plasma: fondo normal del tema (configurable). Moderno: dibuja su propia tarjeta.
+    readonly property bool plasmaStyle: Plasmoid.configuration.style === "plasma"
+    Plasmoid.backgroundHints: plasmaStyle
+        ? PlasmaCore.Types.DefaultBackground | PlasmaCore.Types.ConfigurableBackground
+        : PlasmaCore.Types.NoBackground
 
     readonly property bool inPanel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
                                  || Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property color dockerBlue: "#2496ED"
 
     function stateColor(state) {
+        if (plasmaStyle) {
+            switch (state) {
+            case "running":    return Kirigami.Theme.positiveTextColor
+            case "paused":
+            case "restarting": return Kirigami.Theme.neutralTextColor
+            case "dead":       return Kirigami.Theme.negativeTextColor
+            default:           return Kirigami.Theme.disabledTextColor
+            }
+        }
         switch (state) {
         case "running":    return "#34d399"
         case "paused":     return "#fbbf24"
@@ -172,8 +185,8 @@ PlasmoidItem {
     onExpandedChanged: if (root.expanded) refresh()
 
     // ---------- Vista compacta (panel) ----------
-    compactRepresentation: CompactRepresentation {}
+    compactRepresentation: StyleLoader { base: "CompactRepresentation" }
 
     // ---------- Vista completa (popup / escritorio) ----------
-    fullRepresentation: FullRepresentation {}
+    fullRepresentation: StyleLoader { base: "FullRepresentation" }
 }

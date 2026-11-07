@@ -7,13 +7,13 @@ Plasmoide para KDE Plasma 6 que muestra tus contenedores de Docker, su estado, y
 ## Qué hace
 
 - Lista todos los contenedores (`docker ps -a`), agrupados por proyecto de Docker Compose.
-- Tarjeta oscura con estilo moderno: filas redondeadas, punto de estado con pulso cuando el contenedor está corriendo (verde: corriendo, ámbar: pausado/reiniciando, rojo: muerto, gris: detenido).
+- Tarjeta oscura con estilo moderno: filas redondeadas, punto de estado con halo cuando el contenedor está corriendo y pulso al pasar el mouse (verde: corriendo, ámbar: pausado/reiniciando, rojo: muerto, gris: detenido).
 - Los puertos publicados aparecen como chips; clic en uno para abrir `http://localhost:<puerto>`.
 - Muestra imagen, estado y puertos publicados de cada contenedor.
 - Botones para **levantar**, **reiniciar** y **detener**.
 - Búsqueda por nombre, imagen, proyecto o puerto, y selector **Todos / Activos**.
 - En el panel aparece como ícono con un tooltip que dice cuántos contenedores están corriendo; en el escritorio muestra la lista completa.
-- Se actualiza solo: cada 3 s con el widget abierto y cada 15 s cerrado.
+- Se actualiza solo: cada 3 s con el popup abierto, cada 10 s en el escritorio y cada 30 s en el panel cerrado. Si nada cambió, no redibuja la lista.
 
 ## Requisitos
 

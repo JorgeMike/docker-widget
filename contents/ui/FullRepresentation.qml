@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Effects
 import QtQuick.Controls as QQC2
 import org.kde.plasma.components as PlasmaComponents3
 import org.kde.kirigami as Kirigami
@@ -30,26 +29,19 @@ Item {
         shadow.color: Qt.rgba(0, 0, 0, 0.45)
     }
 
+    // Sin capa ni máscara: el resplandor es un Rectangle con radio y la lista
+    // recorta con un clip rectangular normal (queda dentro de los márgenes).
     Item {
         id: card
         anchors.fill: cardShadow
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            maskEnabled: true
-            maskSource: cardMask
-            maskThresholdMin: 0.5
-            maskSpreadAtMin: 1.0
-        }
 
-        Rectangle { anchors.fill: parent; color: "#111418" }
         // Resplandor azul Docker arriba
         Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: parent.height * 0.45
+            anchors.fill: parent
+            radius: full.cardRadius
             gradient: Gradient {
                 GradientStop { position: 0; color: Qt.rgba(0.14, 0.59, 0.93, 0.22) }
-                GradientStop { position: 1; color: "transparent" }
+                GradientStop { position: 0.45; color: "transparent" }
             }
         }
 
@@ -342,14 +334,6 @@ Item {
         }
     }
 
-    Item {
-        id: cardMask
-        anchors.fill: card
-        layer.enabled: true
-        layer.smooth: true
-        visible: false
-        Rectangle { anchors.fill: parent; radius: full.cardRadius }
-    }
 
     Rectangle {
         anchors.fill: card

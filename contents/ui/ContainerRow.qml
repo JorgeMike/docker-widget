@@ -45,7 +45,9 @@ Rectangle {
         StatusDot {
             Layout.alignment: Qt.AlignVCenter
             color: row.stateColor
-            pulsing: row.isRunning
+            // Pulso solo al pasar el mouse; en reposo un halo fijo
+            pulsing: row.isRunning && hover.hovered
+            glow: row.isRunning
             size: Math.round(Kirigami.Units.gridUnit * 0.55)
         }
 

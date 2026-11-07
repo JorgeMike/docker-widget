@@ -91,6 +91,7 @@ PlasmoidItem {
 
     readonly property int stoppedCount: containers.length - runningCount
     property bool manualRefresh: false
+    property string lastOutput: ""
     readonly property string noProject: "Sin proyecto"
 
     function parseList(stdout) {
@@ -130,6 +131,9 @@ PlasmoidItem {
                 root.manualRefresh = false
                 if (code === 0) {
                     root.errorText = ""
+                    // Si nada cambió no tocamos la lista: cero redibujos
+                    if (data["stdout"] === root.lastOutput) return
+                    root.lastOutput = data["stdout"]
                     root.containers = root.parseList(data["stdout"])
                 } else {
                     root.errorText = (data["stderr"] || "").trim() || "Error al ejecutar docker"
@@ -151,7 +155,8 @@ PlasmoidItem {
 
     Timer {
         id: poll
-        interval: root.expanded ? 3000 : 15000
+        // Popup abierto: 3 s · en el escritorio: 10 s · panel cerrado (solo el contador): 30 s
+        interval: root.expanded ? 3000 : root.inPanel ? 30000 : 10000
         running: true
         repeat: true
         triggeredOnStart: true

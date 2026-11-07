@@ -1,0 +1,3 @@
+# Copia duplicada del paquete (se usa solo para instalar localmente)
+/docker-widget/
+*.plasmoid

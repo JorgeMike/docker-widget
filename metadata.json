@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            { "Name": "Miguel", "Email": "miguel.alvarado.dev@gmail.com" }
+        ],
+        "Category": "System Information",
+        "Description": "Ver contenedores de Docker, su estado y levantarlos o detenerlos",
+        "Icon": "docker-desktop",
+        "Id": "local.dockercontainers",
+        "License": "MIT",
+        "Name": "Contenedores Docker",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
